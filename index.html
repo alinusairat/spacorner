@@ -5579,7 +5579,7 @@ const defFig=b=>b==="farwaniya"?"f":"m";
         const sv = c.steps.map(s => esc(svcOf(s.s).en)).join(" + ") + (c.loc ? ' · <b>For ' + esc(lab(c.loc, c.branch)) + '</b>' : "");
         if (c.st === "done") return '<li class="ci done"><div class="row"><div><b>' + esc(ciName(c)) + '</b><br><span class="note">' + sv + '</span></div><span class="pf okpf">Form received</span></div>' + prefPills({ prefs: c.prefs }) +
           '<div class="row"><button type="button" class="btn" data-ciassign="' + c.id + '">' + (c.loc ? "Assign " + esc(lab(c.loc, c.branch)) : "Assign room…") + '</button><button type="button" class="btn link" data-cidrop="' + c.id + '">Remove</button></div></li>';
-        return '<li class="ci"><div class="row"><div><b>' + esc(ciName(c)) + '</b><br><span class="note">' + sv + '</span></div><span class="pf">' + (first && first.id === c.id ? "On the guest tablet" : "Next in line") + '</span></div>' +
+        return '<li class="ci"><div class="row"><div><b>' + esc(ciName(c)) + '</b><br><span class="note">' + sv + '</span></div><span class="pf">' + (c.claim && Date.now() - (c.claimAt || 0) < 600000 ? "Guest is filling the form" : first && first.id === c.id ? "Next to scan" : "Waiting to scan") + '</span></div>' +
           '<div class="row"><span class="note">Waiting for the guest to tap Done</span><button type="button" class="btn link" data-cidrop="' + c.id + '">Cancel</button></div></li>';
       }).join("") + '</ul>';
     }
@@ -5602,15 +5602,24 @@ const defFig=b=>b==="farwaniya"?"f":"m";
   });
 
   /* ---- guest tablet ---- */
-  const gs = { lang: "ar", branch: lsGet("sc-gst") || null, pB: null, pErr: false, ci: null, prefs: null, lastDone: null, thanksUntil: 0, thanksName: "", menu: false, mErr: false, tm: null, phone: false, pickId: null, finished: false };
+  const gs = { lang: "ar", branch: lsGet("sc-gst") || null, pB: null, pErr: false, ci: null, prefs: null, lastDone: null, thanksUntil: 0, thanksName: "", menu: false, mErr: false, tm: null, phone: false, pickId: null, finished: false, sid: Math.random().toString(36).slice(2) + Date.now().toString(36) };
   const gstWaiting = () => state.cis.filter(c => c.branch === gs.branch && c.st === "sent" && c.id !== gs.lastDone).sort((x, y) => x.at - y.at);
   const gstPick = () => {
     const w = gstWaiting();
     if (!gs.phone) return w[0] || null;
-    /* guest's own phone (paper QR): one guest waiting -> straight to the form; several -> the guest taps their name first */
+    /* guest's own phone (paper QR): first scan gets the first guest. The form is locked to this phone (claim);
+       another phone never gets a claimed form. A claim left unfinished for 10 minutes is freed again. */
     if (gs.finished) return null;
-    if (gs.pickId) return w.find(c => c.id === gs.pickId) || null;
-    return w.length === 1 ? w[0] : null;
+    const now = Date.now(), free = c => !c.claim || c.claim === gs.sid || now - (c.claimAt || 0) > 600000;
+    if (gs.pickId) {
+      const mine = w.find(c => c.id === gs.pickId);
+      if (mine && (!mine.claim || mine.claim === gs.sid)) return mine;
+      gs.pickId = null;                                   // another phone took it first: go to the next one
+    }
+    const c = w.find(free); if (!c) return null;
+    gs.pickId = c.id; c.claim = gs.sid; c.claimAt = now;
+    if (DB) DB.doc("checkins/" + c.id).update({ claim: gs.sid, claimAt: now }).catch(() => {});
+    return c;
   };
   function gstSync() {
     if (!gs.ci && Date.now() < gs.thanksUntil) { if (mode === "gst") gstRender(); clearTimeout(gs.tn); gs.tn = setTimeout(gstSync, gs.thanksUntil - Date.now() + 80); return; }
@@ -5663,10 +5672,8 @@ const defFig=b=>b==="farwaniya"?"f":"m";
       const T = GT[gs.lang];
       html = gstHead() + '<section class="hello"><p class="eyebrow">' + T.thanksE + '</p><h1>' + T.thanks + '</h1><p class="lead">' + T.seat + '</p><p class="lead">' + (gs.lang === "ar" ? "يمكنك إغلاق هذه الصفحة." : "You can close this page.") + '</p></section>' + gstLang();
     } else if (gs.phone && !gs.ci) {
-      const w = gstWaiting(), ar = gs.lang === "ar";
-      html = gstHead() + (w.length > 1
-        ? '<section class="hello"><h1>' + (ar ? "اختر اسمك" : "Tap your name") + '</h1></section><div class="gnames">' + w.map(c => '<button type="button" class="tbtn big" data-gpick="' + c.id + '">' + esc(displayName(c, gs.lang)) + '</button>').join("") + '</div>'
-        : '<section class="hello"><h1>' + (ar ? "لحظات من فضلك" : "One moment please") + '</h1><p class="lead">' + (ar ? "سيُجهّز الاستقبال نموذجك الآن، وسيظهر هنا تلقائياً." : "Reception is preparing your form. It will appear here automatically.") + '</p></section>') + gstLang();
+      const ar = gs.lang === "ar";
+      html = gstHead() + '<section class="hello"><h1>' + (ar ? "لحظات من فضلك" : "One moment please") + '</h1><p class="lead">' + (ar ? "سيُجهّز الاستقبال نموذجك الآن، وسيظهر هنا تلقائياً." : "Reception is preparing your form. It will appear here automatically.") + '</p></section>' + gstLang();
     } else if (gs.ci) {
       html = gstFormHtml();
     } else if (Date.now() < gs.thanksUntil) {
