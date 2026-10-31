@@ -3,11 +3,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Spa Corner</title>
 <script>
-/* Guest form page (GitHub Pages). Only opens with a branch from the printed QR (?g=branch). Talks to the same Apps Script data API. */
+/* Spa Corner on GitHub Pages: guest form (?g=branch) and room tablets (?t=branch&r=room). Same Apps Script data API. */
 window.google = { script: { run: {} } };
-if (!/[?&]g=[a-z]+/.test(location.search)) document.addEventListener("DOMContentLoaded", function () {
-  document.body.innerHTML = '<p style="font:18px system-ui;text-align:center;margin-top:30vh;color:#555">Please scan the QR code at the Spa Corner reception.<br>يرجى مسح الرمز في استقبال سبا كورنر.</p>';
-});
+(function () {
+  var ok = /[?&](g|t)=[a-z]+/.test(location.search);
+  try { if (localStorage.getItem("sc-mode") === "tab") ok = true; } catch (e) {}
+  if (!ok) document.addEventListener("DOMContentLoaded", function () {
+    document.body.innerHTML = '<p style="font:18px system-ui;text-align:center;margin-top:30vh;color:#555">Please scan the QR code at the Spa Corner reception.<br>يرجى مسح الرمز في استقبال سبا كورنر.</p>';
+  });
+})();
 </script>
 </head><body>
 <title>Spa Corner System</title>
@@ -5735,6 +5739,11 @@ const defFig=b=>b==="farwaniya"?"f":"m";
     const go = p => {
       if (p && branchObj(p.g)) {   /* printed QR at reception: the guest's own phone opens the form straight away (nothing saved on the phone) */
         gs.phone = true; gs.branch = p.g; gs.pB = null; gs.menu = false; mode = "gst"; showMode(); gstSync(); return;
+      }
+      if (p && branchObj(p.t) && Number(p.r) >= 1 && Number(p.r) <= branchObj(p.t).rooms) {   /* room QR: ?t=<branch>&r=<room> sets this tablet up as that room (password once) */
+        const r = Number(p.r);
+        if (mode === "tab" && tab.pair && tab.pair.branch === p.t && tab.pair.room === r) return;   // already this room
+        tab.pair = null; tab.pBranch = p.t; tab.pRoom = r; tab.pErr = false; lsSet("sc-tablet", null); setMode("tab"); return;
       }
       if (!p || p.setup !== "guest" || !branchObj(p.b)) return;
       if (mode === "gst" && gs.branch === p.b) return;          // already set up for this branch
