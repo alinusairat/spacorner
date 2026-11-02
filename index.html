@@ -4316,9 +4316,13 @@ three/build/three.module.js:
   }
   function push(op) { pending.push(op); flush(); }
 
+  /* how often to check: screens can ask for a slower pace (idle room tablets); a tap checks at once */
+  var timer = null, inFlight = false;
+  function later(ms) { clearTimeout(timer); timer = setTimeout(poll, ms); }
+  window.SC_POKE = function () { if (!inFlight && ready) later(0); };
   function poll() {
-    var wait = document.hidden ? 15000 : 3000;
-    if (pending.length || flushing) { setTimeout(poll, 800); return; }
+    if (pending.length || flushing) { later(800); return; }
+    inFlight = true;
     run("sync", ver).then(function (r) {
       if (r.ver !== ver) {
         if (r.docs) { docs = {}; r.docs.forEach(function (d) { docs[d.path] = d.data; }); }
@@ -4326,7 +4330,11 @@ three/build/three.module.js:
       }
       var first = !ready; ready = true; if (first) refreshLog(true);
       notify();
-    }).catch(function () {}).then(function () { setTimeout(poll, wait); });
+    }).catch(function () {}).then(function () {
+      inFlight = false;
+      var pace = 3000; try { if (window.SC_POLL_MS) pace = window.SC_POLL_MS() || 3000; } catch (e) {}
+      later(document.hidden ? Math.max(15000, pace) : pace);   /* pace decided after the screen has the new data */
+    });
   }
   function refreshLog(force) {
     var now = Date.now();
@@ -5419,6 +5427,7 @@ const defFig=b=>b==="farwaniya"?"f":"m";
     const sig = JSON.stringify([nb ? [nb.who, nb.a] : 0, v ? v.blk || 0 : 0, H(b)[k] ? 1 : 0]);
     if (sig !== tab.sig2) { tab.sig2 = sig; tabRender(); }
   }
+  document.addEventListener("pointerdown", () => { if (mode === "tab" && window.SC_POKE) window.SC_POKE(); }, true);
   function fitName(root) {
     const g = root.querySelector(".gname"); if (!g) return;
     let fs = parseFloat(getComputedStyle(g).fontSize) || 80, n = 0;
@@ -5829,6 +5838,16 @@ const defFig=b=>b==="farwaniya"?"f":"m";
     try { new MutationObserver(sync).observe($("tablet"), { attributes: true, attributeFilter: ["lang", "dir", "hidden"] }); } catch (e) {}
     sync();
   })();
+  /* How often each screen checks for news (time between checks; Google itself takes ~1.7 s to answer):
+     - a guest's phone waiting for its form, and reception while a form is out with a guest: every 1 s
+     - reception otherwise, a phone filling in its form: every 3 s
+     - room tablets and the desk QR tablet: every 10 s; any tap on a room tablet checks at once */
+  window.SC_POLL_MS = () => {
+    if (mode === "tab") return 10000;   /* the room tablet records its own taps (start, end, cleaning) instantly; only reception changes wait for this */
+    if (mode === "gst") return !gs.phone ? 10000 : (!gs.ci && !gs.finished ? 1000 : 3000);
+    if (mode === "rec") return state.user && state.branch && ciOf(state.branch).some(c => c.st === "sent") ? 1000 : 3000;
+    return 3000;
+  };
   /* connect to the shared database, then start */
   setInterval(setLive, 2000);
   (async function connect() {
