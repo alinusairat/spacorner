@@ -5403,6 +5403,11 @@ const defFig=b=>b==="farwaniya"?"f":"m";
 
   Object.assign(TT.en, { cdWaitRoom: "Your next room is being prepared. Please wait here.", nextG: "Next guest" });
   Object.assign(TT.ar, { cdWaitRoom: "يتم تجهيز غرفتك التالية. يرجى الانتظار هنا.", nextG: "الضيف التالي" });
+  /* Farwaniya (women's branch): Arabic addresses the guest as a woman, the therapist is a woman */
+  TT.arF = Object.assign({}, TT.ar, { ready: "غرفتكِ جاهزة", hello: "أهلاً بكِ", yourTime: "موعدكِ", idleTitle: "أهلاً بكِ في سبا كورنر", idleSub: "ستكون غرفتكِ جاهزة قريباً.",
+    thanks: n => "شكراً لكِ " + n, how: "كيف كانت زيارتكِ؟", comment: "هل لديكِ ما نحسّنه؟ (اختياري)", sent: "وصلنا تقييمكِ", again: "نراكِ قريباً.", google: "قيّمينا أيضاً على Google", pickStar: "اختاري عدد النجوم أولاً.", rate: "قيّمي من 1 إلى 5 نجوم",
+    prepT: "جارٍ تجهيز غرفتكِ", prepS: "شكراً لانتظاركِ.", soon: "ستبدأ المعالِجة جلستكِ بعد قليل.", begun: "بدأت جلستكِ", cdDoneS: "يرجى انتظار المعالِجة.", cdWaitRoom: "يتم تجهيز غرفتكِ التالية. يرجى الانتظار هنا.", nextG: "الضيفة التالية" });
+  { const arM = TT.ar; Object.defineProperty(TT, "ar", { get: () => (mode === "tab" && tab.pair && tab.pair.branch === "farwaniya" ? TT.arF : arM) }); }
   function tabAutoAdv() {
     if (mode !== "tab" || !tab.pair || !DB) return; const b = tab.pair.branch, k = "r" + tab.pair.room, v = V(b)[k];
     if (v && v.status === "active" && v.blk && rdy(b, v.blk)) hopTo(b, k, v, v.blk, "therapist", Date.now());
@@ -5676,12 +5681,17 @@ const defFig=b=>b==="farwaniya"?"f":"m";
     en: { hello: "Welcome", svc: "Your services", min: "min", q1: "How firm would you like the pressure?", q2: "Any areas you would like us to focus on?", q2h: "Tap the body to mark areas", q2h3: "Drag to turn the body, then tap an area", markedNames: l => "Marked: " + l, front: "Front", back: "Back", none: "No area marked", marked: n => n + (n === 1 ? " area marked" : " areas marked"), clear: "Clear",
       q3: "Do you have any illnesses?", q3p: "Please specify", q4: "Do you have a slipped disc?", q5: "Notes for your therapist", q5h: "Allergies, injuries, areas to avoid", yes: "Yes", no: "No", pr: { soft: "Soft", medium: "Medium", hard: "Hard" }, done: "Send to reception", need: "Please answer this question", thanks: "Thank you", thanksE: "Received", seat: "Please take a seat. Reception will take you to your room shortly." }
   };
+  /* Farwaniya is the women's branch: Arabic addresses the guest as a woman */
+  GT.arF = Object.assign({}, GT.ar, { hello: "أهلاً بكِ", q1: "ما درجة الضغط التي تفضّلينها؟", q2: "هل هناك مناطق تودّين أن نركّز عليها؟", q2h: "اضغطي على الجسم لتحديد المناطق", q2h3: "اسحبي لتدوير الجسم، ثم اضغطي على المنطقة", none: "لم تحدّدي أي منطقة", q3: "هل تعانين من أي أمراض؟", q4: "هل لديكِ انزلاق غضروفي (ديسك)؟", q5: "ملاحظات للمعالِجة", done: "أرسلي إلى الاستقبال", thanks: "شكراً لكِ", seat: "تفضّلي بالجلوس، سيرافقكِ الاستقبال إلى غرفتكِ بعد قليل." });
+  const fem = () => (gs.branch || gs.pB) === "farwaniya";
+  const gT = () => GT[gs.lang === "ar" && fem() ? "arF" : gs.lang];
+
   const gstLang = () => '<div class="tlang"><button type="button" data-gl="en" aria-pressed="' + (gs.lang === "en") + '">English</button><button type="button" data-gl="ar" aria-pressed="' + (gs.lang === "ar") + '">عربي</button></div>';
   const gYN = (attr, val, T) => (val == null && gs.miss ? '<p class="gneed" role="alert">' + T.need + '</p>' : '') + '<div class="gseg' + (val == null && gs.miss ? ' need' : '') + '">' + [["no", T.no], ["yes", T.yes]].map(o => '<button type="button" ' + attr + '="' + o[0] + '" aria-pressed="' + (val === o[0]) + '">' + o[1] + '</button>').join("") + '</div>';
   const gsumHtml = (p, T, use3) => p.focus.length ? (use3 ? T.markedNames(p.focus.map(z => B3.label(z, gs.lang === "ar")).join(gs.lang === "ar" ? "، " : ", ")) : T.marked(p.focus.length)) + ' <button type="button" class="glink" id="clrfocus">' + T.clear + '</button>' : T.none;
-  B3.onPick = zone => { if (mode !== "gst") { if (zone && state.draft && state.prefOpen) toggleZone({ dataset: { z: zone } }); return; } if (!gs.prefs || !zone) return; const i = gs.prefs.focus.indexOf(zone); if (i >= 0) gs.prefs.focus.splice(i, 1); else gs.prefs.focus.push(zone); B3.set(gs.prefs.focus); const sm = $("gsum"); if (sm) sm.innerHTML = gsumHtml(gs.prefs, GT[gs.lang], true); };
+  B3.onPick = zone => { if (mode !== "gst") { if (zone && state.draft && state.prefOpen) toggleZone({ dataset: { z: zone } }); return; } if (!gs.prefs || !zone) return; const i = gs.prefs.focus.indexOf(zone); if (i >= 0) gs.prefs.focus.splice(i, 1); else gs.prefs.focus.push(zone); B3.set(gs.prefs.focus); const sm = $("gsum"); if (sm) sm.innerHTML = gsumHtml(gs.prefs, gT(), true); };
   function gstFormHtml() {
-    const use3 = B3.usable(), c = gs.ci, p = gs.prefs, T = GT[gs.lang], ar = gs.lang === "ar", nm = esc(displayName(c, gs.lang)), card = (n, q, h, body) => '<section class="gcard"><div class="gq"><span class="gn">' + n + '</span><div><h2>' + q + '</h2>' + (h ? '<p>' + h + '</p>' : "") + '</div></div>' + body + '</section>';
+    const use3 = B3.usable(), c = gs.ci, p = gs.prefs, T = gT(), ar = gs.lang === "ar", nm = esc(displayName(c, gs.lang)), card = (n, q, h, body) => '<section class="gcard"><div class="gq"><span class="gn">' + n + '</span><div><h2>' + q + '</h2>' + (h ? '<p>' + h + '</p>' : "") + '</div></div>' + body + '</section>';
     return gstHead() + gstLang() +
       '<section class="ghello"><h1 class="gname">' + T.hello + '</h1></section>' +
       '<section class="gsvc"><span class="gsl">' + T.svc + '</span>' + c.steps.map(s => '<span class="gpill">' + esc(ar ? (AR_NAME[svcOf(s.s).en] || svcOf(s.s).en) : svcOf(s.s).en) + ' · ' + svcOf(s.s).min + ' ' + T.min + '</span>').join("") + '</section>' +
@@ -5709,20 +5719,20 @@ const defFig=b=>b==="farwaniya"?"f":"m";
       const bo = branchObj(gs.branch);
       html = '<div class="desk" id="desk"><img class="dlogo" src="' + branchLogo(gs.branch) + '" alt="Spa Corner"><p class="deyebrow">' + esc(bo ? bo.name : "") + '</p>' +
         '<div class="dtile">' + (DESKQR[gs.branch] || "") + '</div>' +
-        '<p class="dl1" dir="rtl" lang="ar">امسح الرمز بكاميرا هاتفك لتعبئة تفضيلات جلستك</p><hr class="drule"><p class="dl2">Scan with your phone camera to fill in your session preferences</p></div>';
+        '<p class="dl1" dir="rtl" lang="ar">' + (fem() ? "امسحي الرمز بكاميرا هاتفكِ لتعبئة تفضيلات جلستكِ" : "امسح الرمز بكاميرا هاتفك لتعبئة تفضيلات جلستك") + '</p><hr class="drule"><p class="dl2">Scan with your phone camera to fill in your session preferences</p></div>';
     } else if (!DB) html = gstHead('<p class="lead">Not connected.</p>');
     else if (gs.phone && gs.finished) {
-      const T = GT[gs.lang];
-      html = gstHead() + '<section class="hello"><p class="eyebrow">' + T.thanksE + '</p><h1>' + T.thanks + '</h1><p class="lead">' + T.seat + '</p><p class="lead">' + (gs.lang === "ar" ? "يمكنك إغلاق هذه الصفحة." : "You can close this page.") + '</p></section>' + gstLang();
+      const T = gT();
+      html = gstHead() + '<section class="hello"><p class="eyebrow">' + T.thanksE + '</p><h1>' + T.thanks + '</h1><p class="lead">' + T.seat + '</p><p class="lead">' + (gs.lang === "ar" ? (fem() ? "يمكنكِ إغلاق هذه الصفحة." : "يمكنك إغلاق هذه الصفحة.") : "You can close this page.") + '</p></section>' + gstLang();
     } else if (gs.phone && !gs.ci) {
       const ar = gs.lang === "ar";
-      html = gstHead() + '<section class="hello"><h1>' + (ar ? "لحظات من فضلك" : "One moment please") + '</h1><p class="lead">' + (ar ? "سيُجهّز الاستقبال نموذجك الآن، وسيظهر هنا تلقائياً." : "Reception is preparing your form. It will appear here automatically.") + '</p><span class="gdots" aria-hidden="true"><i></i><i></i><i></i></span></section>' + gstLang();
+      html = gstHead() + '<section class="hello"><h1>' + (ar ? "لحظات من فضلك" : "One moment please") + '</h1><p class="lead">' + (ar ? (fem() ? "سيُجهّز الاستقبال نموذجكِ الآن، وسيظهر هنا تلقائياً." : "سيُجهّز الاستقبال نموذجك الآن، وسيظهر هنا تلقائياً.") : "Reception is preparing your form. It will appear here automatically.") + '</p><span class="gdots" aria-hidden="true"><i></i><i></i><i></i></span></section>' + gstLang();
     } else if (gs.ci) {
       html = gstFormHtml();
     } else if (Date.now() < gs.thanksUntil) {
-      const T = GT[gs.lang];
+      const T = gT();
       html = gstHead() + '<section class="hello"><p class="eyebrow">' + T.thanksE + '</p><h1>' + T.thanks + '</h1><p class="lead">' + T.seat + '</p></section>' + gstLang();
-    } else html = gstHead() + '<section class="hello"><p class="eyebrow">Spa Corner</p><h1 dir="rtl" lang="ar">أهلاً بك في سبا كورنر</h1><h1>Welcome to Spa Corner</h1></section>';
+    } else html = gstHead() + '<section class="hello"><p class="eyebrow">Spa Corner</p><h1 dir="rtl" lang="ar">' + (fem() ? "أهلاً بكِ في سبا كورنر" : "أهلاً بك في سبا كورنر") + '</h1><h1>Welcome to Spa Corner</h1></section>';
     if (gs.menu) html += '<div class="tstaff" dir="ltr" lang="en"><div class="tstaffbox"><h2>Staff menu</h2>' + (gs.menu === "pw" ? '<input id="gmpw" type="password" inputmode="numeric" autocomplete="off" aria-label="Branch password">' + (gs.mErr ? '<p class="twarn">That password is not right.</p>' : "") +
       '<div class="row"><button type="button" class="tbtn" id="gmok">OK</button><button type="button" class="tskip" id="gmclose">Cancel</button></div>' :
       '<p class="note" style="margin:0 0 10px">3D body: ' + (B3.usable() ? "working" : "not available (" + B3.why() + ")") + '</p><div class="row"><button type="button" class="tbtn" id="gunpair">Switch branch</button><button type="button" class="tbtn" id="gback">Back to start</button><button type="button" class="tskip" id="gmclose">Close</button></div>') + '</div></div>';
